@@ -57,7 +57,7 @@ rp = 2.5
 np = int(rqdvf*4*plateThick*(plateOuterR*plateOuterR - plateInnerR*plateInnerR)/sphereVol(rp))
 
 # creating list of coordinates
-imax = jmax = int(m.sqrt(ns))+1
+imax = jmax = int(m.sqrt(np))+1
 d = 2.5*rp
 
 if (2*plateOuterR/imax)>d:
