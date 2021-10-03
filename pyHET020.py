@@ -183,7 +183,7 @@ print("created disc")
 a = mdb.models['Model-1'].rootAssembly
 a.DatumCsysByDefault(CARTESIAN)
 p = mdb.models['Model-1'].parts['Disc']
-a.Instance(name='Plate-0', part=p, dependent=ON)
+a.Instance(name='Disc-1', part=p, dependent=ON)
 
 #creating island
 i = 0
@@ -214,11 +214,19 @@ while i < ns:
     print('created island-%d'%(i+1))
     a.Instance(name='Island-%d'%(i+1), part=p, dependent=ON)
     a.translate(instanceList=('Island-%d'%(i+1), ), vector=(x[i], y[i], z[i]))
+    if i == 0:
+        selectedInstances = (a.instances['Island-%d' % (i + 1)],)
+    else:
+        sphereInstances = a.instances['Island-%d' % (i + 1)]
+        selectedInstances = selectedInstances + (sphereInstances,)
+    i += 1
 
-    #merging instances
-    a.InstanceFromBooleanMerge(name='Plate', instances=(a.instances['Plate-%d'%i],a.instances['Island-%d'%(i+1)],),keepIntersections=ON, originalInstances=SUPPRESS, domain=GEOMETRY)
-    print('merged island-%d'%(i+1))
-    i = i + 1
+selectedInstances = selectedInstances + (a.instances['Disc-1'],)
+
+# merging instances
+a.InstanceFromBooleanMerge(name='Plate', instances=selectedInstances, keepIntersections=ON, originalInstances=SUPPRESS,
+                           domain=GEOMETRY)
+print('merged islands')
 a.regenerate()
 
 p=mdb.models['Model-1'].parts['Punch']
@@ -284,7 +292,7 @@ mdb.models['Model-1'].interactionProperties['IntProp-1'].TangentialBehavior(
         table=((0.2,),), shearStressLimit=None, maximumElasticSlip=FRACTION,
         fraction=0.005, elasticSlipStiffness=None)
 
-f = a.instances['Plate-%d'%ns].faces
+f = a.instances['Plate-1'].faces
 sur=f.findAt(((35,0,0.0),)) + f.findAt(((25,0,4),)) + f.findAt(((25.585786,0,0.585786),)) #+ f.findAt(((-0.026,0.026,0.0),)) + f.findAt(((-0.026,-0.026,0.0),)) + f.findAt(((0.026,-0.026,0.0),)) + f.findAt(((0.0176776699,0.0176776699,0.003),)) + f.findAt(((-0.0176776699,0.0176776699,0.003),))+ f.findAt(((-0.0176776699,-0.0176776699,0.003),))+ f.findAt(((0.0176776699,-0.0176776699,0.003),))
 slaveSurf=a.Surface(side1Faces=sur,name='PlateSurf')
 
@@ -303,7 +311,7 @@ print("interaction created")
 
 #creating boundary conditions
 
-f=a.instances['Plate-%d'%ns].faces
+f=a.instances['Plate-1'].faces
 encastface = f.findAt(((150,0,0.0),)) + f.findAt(((150,0,5),)) #+ f.findAt(((-0.15,-0.15,0.0),)) + f.findAt(((0.15,-0.15,0.0),))
 BCset1 = a.Set(faces = encastface, name = 'BC1')
 mdb.models['Model-1'].EncastreBC(name='BC-1',createStepName='Initial',region = BCset1,localCsys=None)
