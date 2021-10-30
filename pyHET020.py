@@ -237,6 +237,11 @@ a.regenerate()
 
 print("created assembly")
 
+i = 0
+while i < ns:
+	del mdb.models['Model-1'].parts['Island-%d'%(i+1)]
+	i += 1
+
 #assigning section
 
 #creating Ferrite set
