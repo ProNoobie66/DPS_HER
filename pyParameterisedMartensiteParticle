@@ -1,0 +1,283 @@
+# author Rohit
+# code for creating martensite particle in file name HETmultimodels.cae
+# copy model named Model-ParameterBasic and rename as Model-2
+# immediately after running the script rename the model as Model-Vf-xx-Ps-rr
+# Hole expansion test model with martensite particle of specific radius spread uniformly across martensite
+
+from abaqus import *
+from abaqusConstants import *
+import __main__
+
+import section
+import regionToolset
+import displayGroupMdbToolset as dgm
+import part
+import material
+import assembly
+import step
+import interaction
+import load
+import mesh
+import optimization
+import job
+import sketch
+import visualization
+import xyPlot
+import displayGroupOdbToolset as dgo
+import connectorBehavior
+import math as m
+import random as rm
+import numpy as np
+import os
+
+
+# function to find distance
+def dist(x1, y1, z1=0, x2=0, y2=0, z2=0):
+	d = m.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1) + (z2 - z1) * (z2 - z1))
+	return d
+
+
+# function to find volume of sphere
+def sphereVol(rad):
+	vol = 4 * m.pi * rad * rad * rad / 3
+	return vol
+
+
+# specimen plate parameters
+plateOuterRadius = 25.0  # um
+plateInnerRadius = 5.0  # um
+plateRadius = 50.0  # um
+plateThickness = 1.0  # um
+plateVolume = m.pi * plateThickness * (plateOuterRadius * plateOuterRadius - plateInnerRadius * plateInnerRadius)
+
+# cone indenter dimension
+coneHeight = 130.0  # um
+coneRadius = 75.0  # um
+coneAngle = 30.0  # degree
+
+# martensite particles parameters
+particleRadius = 0.5  # um
+requiredVolumeFraction = 0.2  # fraction
+particleVolume = sphereVol(particleRadius)
+
+# number of particles and their co-ordinates
+maxNoOfParticles = int(requiredVolumeFraction * plateVolume / particleVolume)
+
+imax = jmax = int(m.sqrt(maxNoOfParticles)) + 1  # maximum limit on particles in x and y direction
+minimumDistanceBetweenParticles = 2.5*particleRadius  # um center to center distance between particles
+
+if (2*plateOuterRadius/imax) > minimumDistanceBetweenParticles:
+	minimumDistanceBetweenParticles = 2*plateOuterRadius/imax
+
+zp = plateThickness/2  #all the particles are placed at center of thickness of plate
+
+currentVolumeFraction = 0.0
+noOfParticles = 0
+totalParticleVolume = 0.0
+
+i = j = 0
+x = []  # x-coordinate list of particles
+y = []  # y-coordinate list of particles
+z = []  # z-coordinate list of particles
+r = []  # radius list of particles
+
+while j<jmax:
+	yp = -plateOuterRadius + j * minimumDistanceBetweenParticles
+	i = 0
+	while i < imax:
+		xp = -plateOuterRadius + i * minimumDistanceBetweenParticles
+		if (dist(xp,yp)<=plateOuterRadius - particleRadius) and (dist(xp,yp)>plateInnerRadius+particleRadius):
+			totalParticleVolume += particleVolume
+			currentVolumeFraction = totalParticleVolume/plateVolume
+			print('Current Volume Fraction = ',currentVolumeFraction)
+			if currentVolumeFraction < requiredVolumeFraction:
+				x.append(xp)
+				y.append(yp)
+				z.append(zp)
+				r.append(particleRadius)
+				noOfParticles += 1
+				print('No.of particles = ', noOfParticles)
+			else:
+				break
+		i += 1
+	j += 1
+
+print('List of coordinates of particles generated')
+
+# creating model
+
+model = mdb.models['Model-2']
+
+# creating materials
+model.Material(name='Ferrite')
+model.materials['Ferrite'].Elastic(table=((210000e-6,0.3),))
+model.materials['Ferrite'].Plastic(table=((302.0e-6, 0.0), (304.0e-6, 0.0001), (305.0e-6, 0.0002),
+														  (307.0e-6, 0.0004), (310.0e-6, 0.0008), (317.0e-6, 0.0016),
+														  (328.0e-6, 0.0032), (344.0e-6, 0.0064), (366.0e-6, 0.0125),
+														  (398.0e-6, 0.025), (443.0e-6, 0.05), (499.0e-6, 0.1),
+														  (536.0e-6, 0.15), (562.0e-6, 0.2)))
+model.Material(name='Martensite')
+model.materials['Martensite'].Elastic(table=((225000e-6,0.3),))
+model.materials['Martensite'].Plastic(table=((235.0e-6, 0.0), (248.0e-6, 0.0001), (270.0e-6, 0.0002),
+															 (315.0e-6, 0.0004), (405.0e-6, 0.0008), (585.0e-6, 0.0016),
+															 (945.0e-6, 0.0032), (1170.0e-6, 0.0042), (1463.0e-6, 0.0055),
+															 (1712.0e-6, 0.007), (1807.0e-6, 0.008), (1935.0e-6, 0.01),
+															 (2105.0e-6, 0.015), (2184.0e-6, 0.02), (2245.0e-6, 0.03),
+															 (2263.0e-6, 0.04), (2268.0e-6, 0.05), (2270.0e-6, 0.1),
+															 (2270.0e-6, 0.15), (2270.0e-6, 0.2)))
+
+print('created materials')
+
+# creating sections
+
+model.HomogeneousSolidSection(name='FerriteSection', material='Ferrite', thickness=None)
+model.HomogeneousSolidSection(name='MartensiteSection', material='Martensite', thickness=None)
+
+# creating parts
+
+# punch
+
+# s = model.ConstrainedSketch(name='__profile__', sheetSize=200.0)
+# g, v, d, c = s.geometry, s.vertices, s.dimensions, s.constraints
+# s.setPrimaryObject(option=STANDALONE)
+# s.ConstructionLine(point1=(0.0,-250.0), point2=(0.0,250.0))
+# s.FixedConstraint(entity=g.findAt((0.0,1.0),))
+# s.Line(point1=(0.0,0.0), point2=(coneRadius,-coneHeight))
+# s.FixedConstraint(entity=v.findAt((0.0,0.0),))
+# s.AngularDimension(line1=g.findAt((coneRadius,-coneHeight),), line2=g.findAt((0.0,-100.0),), textPoint=(5,-15),value=coneAngle)
+# partPunch = model.Part(name='Punch', dimensionality=THREE_D, type=ANALYTIC_RIGID_SURFACE)
+# partPunch = model.parts['Punch']
+# partPunch.AnalyticRigidSurfRevolve(sketch=s)
+# s.unsetPrimaryObject()
+# del model.sketches['__profile__']
+# partPunch.ReferencePoint(point=partPunch.vertices.findAt((0.0,0.0,0.0),))
+# print('Punch created')
+
+# disc
+
+# s = model.ConstrainedSketch(name='__profile__', sheetSize = 250.0)
+# g, v, d, c = s.geometry, s.vertices, s.dimensions, s.constraints
+# s.setPrimaryObject(option=STANDALONE)
+# s.CircleByCenterPerimeter(center=(0.0,0.0), point1=(plateRadius,0.0))
+# s.CircleByCenterPerimeter(center=(0.0,0.0), point1=(plateInnerRadius,0.0))
+# partDisc = model.Part(name='Disc', dimensionality=THREE_D, type=DEFORMABLE_BODY)
+partDisc = model.parts['Disc']
+# partDisc.BaseSolidExtrude(sketch=s, depth=plateThickness)
+# s.unsetPrimaryObject()
+# del model.sketches['__profile__']
+# f, e, d = partDisc.faces, partDisc.edges, partDisc.datums
+# t = partDisc.MakeSketchTransform(sketchPlane = f.findAt((plateOuterRadius,plateOuterRadius,plateThickness)),sketchUpEdge = e.findAt((plateInnerRadius,0.0,plateThickness),),
+# 								 sketchPlaneSide=SIDE1, origin=(0.0,0.0,plateThickness))
+# s = model.ConstrainedSketch(name='__profile__', sheetSize=1.41, gridSpacing=0.3, transform=t)
+# g, v, d, c = s.geometry, s.vertices, s.dimensions, s.constraints
+# s.setPrimaryObject(option=SUPERIMPOSE)
+# partDisc.projectReferencesOntoSketch(sketch=s, filter = COPLANAR_EDGES)
+# s.CircleByCenterPerimeter(center=(0.0,0.0), point1=(plateOuterRadius,0.0))
+# f = partDisc.faces
+# pickedFaces = f.findAt((150.0,150.0,5.0))
+# e, d = partDisc.edges, partDisc.datums
+# e1 = partDisc.edges.findAt((25.0,0.0,5.0))
+# partDisc.PartitionFaceBySketch(sketchUpEdge =e1, faces=pickedFaces, sketch=s)
+# s.unsetPrimaryObject()
+# del model.sketches['__profile__']
+# centerAxis = partDisc.DatumAxisByPrincipalAxis(principalAxis=ZAXIS)
+# centerAxisID = centerAxis.id
+# pickedCells = partDisc.cells.findAt(((30.0,30.0,3.0),))
+# pickedEdges = e.findAt((plateOuterRadius,0.0,plateThickness),)
+# partDisc.PartitionCellByExtrudeEdge(line=d[centerAxisID],cells=pickedCells,edges=pickedEdges,sense=REVERSE)
+# partDisc.Round(radius=filletRadius, edgeList = (e.findAt((plateInnerRadius,0.0,0.0),),))
+# print('Created disc')
+
+# creating particles and assembly
+assembly = model.rootAssembly
+assembly.DatumCsysByDefault(CARTESIAN)
+#assembly.Instance(name='Disc-1',part=partDisc, dependent = ON)
+
+# creating island
+i = 0
+while i < noOfParticles:
+	s = model.ConstrainedSketch(name='__profile__',sheetSize=5)
+	g, v, d, c = s.geometry, s.vertices, s.dimensions, s.constraints
+	s.sketchOptions.setValues(decimalPlaces=4)
+	centerConstructLine = s.ConstructionLine(point1=(0.0,-3),point2=(0.0,3))
+	centerConstructLineID = centerConstructLine.id
+	s.FixedConstraint(entity=g[centerConstructLineID])
+	s.ArcByCenterEnds(center=(0.0,0.0), point1=(0.0,r[i]), point2=(0.0,-r[i]),direction=CLOCKWISE)
+	s.Line(point1=(0.0,-r[i]),point2=(0.0,r[i]))
+	p = model.Part(name='Particle-{}'.format(i+1),dimensionality=THREE_D,type=DEFORMABLE_BODY)
+	p.BaseSolidRevolve(sketch=s,angle=360.0,flipRevolveDirection=OFF)
+	p = model.parts['Particle-{}'.format(i+1)]
+	del model.sketches['__profile__']
+	XYP = p.DatumPlaneByPrincipalPlane(principalPlane=XYPLANE, offset=0.0)
+	XYPID = XYP.id
+	XZP = p.DatumPlaneByPrincipalPlane(principalPlane=XZPLANE, offset=0.0)
+	XZPID= XZP.id
+	YZP = p.DatumPlaneByPrincipalPlane(principalPlane=YZPLANE, offset=0.0)
+	YZPID = YZP.id
+	c = p.cells.findAt(((0.0,0.0,0.0),))
+	d = p.datums
+	p.PartitionCellByDatumPlane(datumPlane=d[XYPID],cells=c)
+	c = p.cells.getByBoundingBox(-r[i],-r[i],-r[i],r[i],r[i],r[i])
+	p.PartitionCellByDatumPlane(datumPlane=d[XZPID],cells =c)
+	c = p.cells.getByBoundingBox(-r[i], -r[i], -r[i], r[i], r[i], r[i])
+	p.PartitionCellByDatumPlane(datumPlane=d[YZPID], cells=c)
+	print('Created Particle-{}'.format(i+1))
+	# creating assembly
+	assembly.Instance(name='Particle-{}'.format(i+1), part=p, dependent=ON)
+	assembly.translate(instanceList=('Particle-{}'.format(i+1),),vector=(x[i],y[i],z[i]))
+	if i == 0:
+		selectedInstances = (assembly.instances['Particle-{}'.format(i+1)],)
+	else:
+		sphereInstances = assembly.instances['Particle-{}'.format(i+1)]
+		selectedInstances = selectedInstances + (sphereInstances,)
+	i += 1
+
+selectedInstances = selectedInstances + (assembly.instances['Disc-1'],)
+# particles placed on their coordinates
+
+# merging instances
+assembly.InstanceFromBooleanMerge(name='Plate',instances=selectedInstances,keepIntersections=ON, originalInstances=DELETE, domain=GEOMETRY)
+print('merged particles and disc')
+assembly.regenerate()
+
+print('created assembly')
+
+i = 0
+while i<noOfParticles:
+	del model.parts['Particle-{}'.format(i+1)]
+	i += 1
+
+# assigning sections
+# creating ferrite section
+partPlate = model.parts['Plate']
+# ferriteCell = partPlate.cells.findAt(((plateInnerRadius+particleRadius/2,0.0,plateThickness/1.5),))+partPlate.cells.findAt(((plateOuterRadius*1.5,0.0,plateThickness/2),))
+# partPlate.Set(cells=ferriteCell,name='Set-Ferrite')
+# region= partPlate.sets['Set-Ferrite']
+# partPlate.SectionAssignment(region=region,sectionName='FerriteSection',offset=0.0,offsetType=MIDDLE_SURFACE,offsetField='',thicknessAssignment=FROM_SECTION)
+# print('Ferrite Section assigned')
+
+# creating martensite set
+mpl = []  #list of coordinates of martensite region
+i = 0
+while i < noOfParticles:
+	mpl.append((x[i] + r[i] / 2, y[i] + r[i] / 2, z[i] + r[i] / 2))
+	mpl.append((x[i] - r[i] / 2, y[i] + r[i] / 2, z[i] + r[i] / 2))
+	mpl.append((x[i] + r[i] / 2, y[i] - r[i] / 2, z[i] + r[i] / 2))
+	mpl.append((x[i] - r[i] / 2, y[i] - r[i] / 2, z[i] + r[i] / 2))
+	mpl.append((x[i] + r[i] / 2, y[i] + r[i] / 2, z[i] - r[i] / 2))
+	mpl.append((x[i] - r[i] / 2, y[i] + r[i] / 2, z[i] - r[i] / 2))
+	mpl.append((x[i] + r[i] / 2, y[i] - r[i] / 2, z[i] - r[i] / 2))
+	mpl.append((x[i] - r[i] / 2, y[i] - r[i] / 2, z[i] - r[i] / 2))
+	i = i + 1
+mp = tuple(mpl)  # tuple list of all coordinates of martensite cells
+i = 0
+martensiteCell=partPlate.cells.findAt((mp[i],))
+while i < len(mp):
+	martensiteCell = martensiteCell + partPlate.cells.findAt((mp[i],))
+	i = i +1
+partPlate.Set(cells=martensiteCell, name='Set-Martensite')
+partPlate.SectionAssignment(region = partPlate.sets['Set-Martensite'],sectionName='MartensiteSection',offset=0.0,offsetType=MIDDLE_SURFACE,offsetField='',thicknessAssignment=FROM_SECTION)
+
+print("assigned section")
+
+assembly.regenerate()
