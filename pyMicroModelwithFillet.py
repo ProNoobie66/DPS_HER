@@ -1,4 +1,5 @@
-#pyHET019 = Macro-model for HER with code
+# author Rohit
+# Macro-model for HER with code
 from abaqus import *
 from abaqusConstants import *
 import __main__
