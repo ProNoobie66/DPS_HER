@@ -1,5 +1,5 @@
-#author Rohit
-#HET020 random sphere microstructre plate with fillet and cone punch
+# author Rohit
+# random sphere microstructure plate with fillet and cone punch
 from abaqus import *
 from abaqusConstants import *
 import __main__
@@ -28,7 +28,7 @@ import os
 
 #changing working directory
 Mdb()
-os.chdir(r"C:\Users\Rohit\Desktop\IITB\DPS HER\HET020")
+#os.chdir(r"C:\Users\Rohit\Desktop\IITB\DPS HER\HET020")
 
 #function to check if point is in reqd region
 
@@ -50,7 +50,7 @@ plateInnerR = 25 #um
 plateThick = 5 #um
 plateVol = m.pi*plateThick*(plateOuterR*plateOuterR-plateInnerR*plateInnerR)
 
-rqdvf = 0.001    #required volume fraction
+rqdvf = 0.05    #required volume fraction
 
 #creating list of coordinates
 
@@ -239,8 +239,8 @@ print("created assembly")
 
 i = 0
 while i < ns:
-	del mdb.models['Model-1'].parts['Island-%d'%(i+1)]
-	i += 1
+    del mdb.models['Model-1'].parts['Island-%d'%(i+1)]
+    i += 1
 
 #assigning section
 
