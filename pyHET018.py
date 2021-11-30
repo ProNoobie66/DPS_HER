@@ -1,5 +1,7 @@
 #author Rohit
 #HET018 random sphere microstructre plate
+# units in mm and N
+# ignore this code
 from abaqus import *
 from abaqusConstants import *
 import __main__
