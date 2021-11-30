@@ -1,5 +1,5 @@
-#author Rohit
-#HET020 random sphere microstructre plate with fillet and cone punch
+# author Rohit
+# parameterised sphere microstructre plate with fillet and cone punch
 from abaqus import *
 from abaqusConstants import *
 import __main__
@@ -29,7 +29,7 @@ import os
 
 #changing working directory
 Mdb()
-os.chdir(r"C:\Users\Rohit\Desktop\IITB\DPS HER\HET020")
+#os.chdir(r"C:\Users\Rohit\Desktop\IITB\DPS HER\HET020")
 
 #function to check if point is in reqd region
 
@@ -331,6 +331,8 @@ mdb.models['Model-1'].DisplacementBC(name = 'BC-2',createStepName = 'Step-1',reg
 									 fieldName ='', localCsys=None)
 
 print("Boundary conditions created")
+
+a.regenerate()
 
 #creating mesh
 
