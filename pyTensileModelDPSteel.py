@@ -129,7 +129,7 @@ model.HomogeneousSolidSection(name='FerriteSection', material='Ferrite', thickne
 print('created section')
 
 # creating tensile part sketch
-
+#
 s = model.ConstrainedSketch(name='__profile__', sheetSize=200.0)
 g, v, d, c = s.geometry, s.vertices, s.dimensions, s.constraints
 s.Line(point1=(-35.0, 0.0), point2=(35.0, 0.0))
