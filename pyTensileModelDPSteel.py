@@ -84,7 +84,7 @@ while vf < rqdvf:
 
 print('radius and center generated')
 # creating a model
-#Mdb()
+#Mdb() if creating a new file
 model = mdb.Model(name='Model-VF{}'.format(int(rqdvf*100)), modelType=STANDARD_EXPLICIT)
 
 # creating materials
